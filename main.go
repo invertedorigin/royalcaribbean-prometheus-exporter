@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/keatontaylor/healthchecker-go/pkg/healthchecker"
+	"github.com/keatontaylor/healthchecker-go/pkg/exporter"
 )
 
 type urlArrayFlags []string
@@ -42,7 +42,7 @@ func init() {
 	flag.DurationVar(
 		&healthcheck_interval,
 		"interval",
-		5*time.Second,
+		60*time.Second,
 		"Interval for the healthchecks",
 	)
 	flag.Var(
@@ -61,8 +61,8 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	// Start the collector
-	healthchecker := healthchecker.NewHealthChecker(ctx, healthcheck_interval, urls)
-	healthchecker.StartCollector()
+	exporter := exporter.NewExporter(ctx, healthcheck_interval, urls)
+	exporter.StartCollector()
 
 	// start the http server
 	server := &http.Server{Addr: ":2112", Handler: nil}
