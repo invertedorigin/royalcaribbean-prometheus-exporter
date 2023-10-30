@@ -395,6 +395,9 @@ func (hc *Exporter) fetchStats(url string) {
 func (hc *Exporter) StartCollector() {
 	ticker := time.NewTicker(hc.healthcheck_invertval)
 	log.Println("starting exporter")
+	for _, u := range hc.urls {
+		hc.fetchStats(u)
+	}
 	go func() {
 		for {
 			select {
