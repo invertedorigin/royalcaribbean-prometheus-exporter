@@ -1,15 +1,15 @@
 package exporter
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
+	"io"
 	"log"
 	"net/http"
 	"net/http/httptrace"
-	"time"
-	"encoding/json"
-	"io"
-	"bytes"
 	"strconv"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -160,8 +160,8 @@ type CruiseSearch struct {
 					} `json:"sailings"`
 					Typename string `json:"__typename"`
 				} `json:"cruises"`
-				Total                  int    `json:"total"`
-				Typename               string `json:"__typename"`
+				Total    int    `json:"total"`
+				Typename string `json:"__typename"`
 			} `json:"results"`
 			Typename string `json:"__typename"`
 		} `json:"cruiseSearch"`
@@ -169,20 +169,22 @@ type CruiseSearch struct {
 }
 
 type customMetric struct {
-	url         string
-	status      float64
-	totalMS     float64
-	dnsMS       float64
-	firstbyteMS float64
-	connectMS   float64
-	price       float64
-	cruiseID    string
-	itinerary   string
+	url             string
+	status          float64
+	totalMS         float64
+	dnsMS           float64
+	firstbyteMS     float64
+	connectMS       float64
+	price           float64
+	cruiseID        string
+	itinerary       string
 	stateroomClass  string
-	dateLabel   string
-	ship        string
-	departurePort string
-	days          string
+	dateLabel       string
+	ship            string
+	departurePort   string
+	days            string
+	shipCode        string
+	destinationCode string
 }
 
 type Exporter struct {
@@ -235,7 +237,7 @@ func NewExporter(ctx context.Context, inverval time.Duration, urls []string) (hc
 			Subsystem: "external",
 			Name:      "price",
 			Help:      "cabin price with labels",
-		}, []string{"url", "cruiseid", "itinerary", "stateroomclass", "datelabel", "ship", "departureport", "days"}),
+		}, []string{"url", "cruiseid", "itinerary", "stateroomclass", "datelabel", "ship", "departureport", "days", "shipcode", "destinationcode"}),
 		healthcheck_invertval: inverval,
 		urls:                  urls,
 	}
@@ -269,14 +271,16 @@ func (hc *Exporter) updateCustomMetrics(cm *customMetric) {
 		"url": cm.url,
 	}).Set(cm.status)
 	hc.royalPrice.With(prometheus.Labels{
-		"url": cm.url,
-		"cruiseid": cm.cruiseID,
-		"itinerary": cm.itinerary,
-		"stateroomclass": cm.stateroomClass,
-		"datelabel": cm.dateLabel,
-		"ship": cm.ship,
-		"departureport": cm.departurePort,
-		"days": cm.days,
+		"url":             cm.url,
+		"cruiseid":        cm.cruiseID,
+		"itinerary":       cm.itinerary,
+		"stateroomclass":  cm.stateroomClass,
+		"datelabel":       cm.dateLabel,
+		"ship":            cm.ship,
+		"departureport":   cm.departurePort,
+		"days":            cm.days,
+		"shipcode":        cm.shipCode,
+		"destinationcode": cm.destinationCode,
 	}).Set(cm.price)
 }
 
@@ -321,7 +325,6 @@ func (hc *Exporter) fetchStats(url string) {
 		}
 
 		jsonValue, _ := json.Marshal(jsonData)
-		
 
 		// Create an HTTP request with the JSON data and custom User-Agent header.
 		req, err := http.NewRequestWithContext(httptrace.WithClientTrace(hc.ctx, trace), "POST", url, bytes.NewBuffer(jsonValue))
@@ -357,20 +360,22 @@ func (hc *Exporter) fetchStats(url string) {
 					if stateroom.Price.Value > 0 {
 						hc.updateCustomMetrics(
 							&customMetric{
-								url:         url,
-								dnsMS:       dnsMS,
-								connectMS:   connectMS,
-								firstbyteMS: firstbyteMS,
-								totalMS:     totalMS,
-								status:      status,
-								price:       float64(stateroom.Price.Value),
-								cruiseID:    s.ID,
-								itinerary:   sc.Itinerary.Code,
-								stateroomClass: stateroom.StateroomClass.ID,
-								dateLabel: sc.SailDate,
-								ship: s.MasterSailing.Itinerary.Ship.Name,
-								departurePort: s.MasterSailing.Itinerary.DeparturePort.Name,
-								days: strconv.Itoa(s.MasterSailing.Itinerary.TotalNights),
+								url:             url,
+								dnsMS:           dnsMS,
+								connectMS:       connectMS,
+								firstbyteMS:     firstbyteMS,
+								totalMS:         totalMS,
+								status:          status,
+								price:           float64(stateroom.Price.Value),
+								cruiseID:        s.ID,
+								itinerary:       sc.Itinerary.Code,
+								stateroomClass:  stateroom.StateroomClass.ID,
+								dateLabel:       sc.SailDate,
+								ship:            s.MasterSailing.Itinerary.Ship.Name,
+								departurePort:   s.MasterSailing.Itinerary.DeparturePort.Name,
+								days:            strconv.Itoa(s.MasterSailing.Itinerary.TotalNights),
+								shipCode:        s.MasterSailing.Itinerary.Ship.Code,
+								destinationCode: s.MasterSailing.Itinerary.Destination.Code,
 							},
 						)
 					}
@@ -380,7 +385,7 @@ func (hc *Exporter) fetchStats(url string) {
 
 		log.Printf("pulled down %d skipping the first %d of %d total", count, skip, data.Data.CruiseSearch.Results.Total)
 		if skip < (data.Data.CruiseSearch.Results.Total - 20) {
-			skip = skip + 20 
+			skip = skip + 20
 		} else {
 			break
 		}
