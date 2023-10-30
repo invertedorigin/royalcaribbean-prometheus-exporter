@@ -11,7 +11,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/keatontaylor/healthchecker-go/pkg/exporter"
+	"github.com/invertedorigin/royalcaribbean-prometheus-exporter/pkg/exporter"
 )
 
 type urlArrayFlags []string

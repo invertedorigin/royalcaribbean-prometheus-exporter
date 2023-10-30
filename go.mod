@@ -1,5 +1,4 @@
-module github.com/keatontaylor/healthchecker-go
-
+module github.com/invertedorigin/royalcaribbean-prometheus-exporter
 go 1.16
 
 require (
