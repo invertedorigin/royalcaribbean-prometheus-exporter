@@ -286,6 +286,8 @@ func (hc *Exporter) updateCustomMetrics(cm *customMetric) {
 
 func (hc *Exporter) fetchStats(url string) {
 
+	hc.royalPrice.Reset()
+
 	var start, connect, dns time.Time
 
 	var connectMS, dnsMS, firstbyteMS, totalMS, status float64
