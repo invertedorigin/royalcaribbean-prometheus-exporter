@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
@@ -14,6 +15,42 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
+
+type Sailing struct {
+	BookingLink string `json:"bookingLink"`
+	ID          string `json:"id"`
+	Itinerary   struct {
+		Code     string `json:"code"`
+		Typename string `json:"__typename"`
+	} `json:"itinerary"`
+	SailDate              string `json:"sailDate"`
+	StartDate             string `json:"startDate"`
+	EndDate               string `json:"endDate"`
+	StateroomClassPricing []struct {
+		Price struct {
+			Value    int    `json:"value"`
+			Typename string `json:"__typename"`
+		} `json:"price"`
+		StateroomClass struct {
+			ID       string `json:"id"`
+			Typename string `json:"__typename"`
+		} `json:"stateroomClass"`
+		Typename string `json:"__typename"`
+	} `json:"stateroomClassPricing"`
+	Typename string `json:"__typename"`
+}
+
+type StateroomClassPricing struct {
+	Price struct {
+		Value    int    `json:"value"`
+		Typename string `json:"__typename"`
+	} `json:"price"`
+	StateroomClass struct {
+		ID       string `json:"id"`
+		Typename string `json:"__typename"`
+	} `json:"stateroomClass"`
+	Typename string `json:"__typename"`
+}
 
 type CruiseSearch struct {
 	Data struct {
@@ -168,23 +205,140 @@ type CruiseSearch struct {
 	} `json:"data"`
 }
 
+type CruiseDetails struct {
+	StepType  string `json:"stepType"`
+	URLParams []struct {
+		Name  string `json:"name"`
+		Value string `json:"value"`
+	} `json:"urlParams"`
+	Steps []struct {
+		Label                     string `json:"label"`
+		StepType                  string `json:"stepType"`
+		ServicePath               string `json:"servicePath"`
+		Active                    bool   `json:"active"`
+		Completed                 bool   `json:"completed"`
+		BookingStepMobileProgress struct {
+			MobileLabelPart1 string `json:"mobileLabelPart1"`
+			MobileLabelPart2 string `json:"mobileLabelPart2"`
+		} `json:"bookingStepMobileProgress"`
+		Disabled bool `json:"disabled"`
+		External bool `json:"external"`
+	} `json:"steps"`
+	StepDetails struct {
+		BookingFooter struct {
+			TermAndConditionsHeading string   `json:"termAndConditionsHeading"`
+			TermAndConditions        []string `json:"termAndConditions"`
+
+			PriceOccupancyAlert string `json:"priceOccupancyAlert"`
+		} `json:"bookingFooter"`
+		ResetSession           bool `json:"resetSession"`
+		SelectedStateroomIndex int  `json:"selectedStateroomIndex"`
+
+		Resources struct {
+			BofaURL string `json:"bofaUrl"`
+		} `json:"resources"`
+		SelectedCabinPrices struct {
+		} `json:"selectedCabinPrices"`
+		StateroomsInfo struct {
+		} `json:"stateroomsInfo"`
+		Toggles []struct {
+			Name string `json:"name"`
+			On   bool   `json:"on"`
+		} `json:"toggles"`
+		InFinalPaymentPeriod   bool   `json:"inFinalPaymentPeriod"`
+		DisplayState           string `json:"displayState"`
+		MaxOccupancyCategories struct {
+		} `json:"maxOccupancyCategories"`
+		Description             string `json:"description"`
+		CabinClass              string `json:"cabinClass"`
+		StateroomCategoryGroups []struct {
+			StateroomType       string `json:"stateroomType"`
+			Title               string `json:"title"`
+			Description         string `json:"description"`
+			StateroomCategories []struct {
+				Title       string `json:"title"`
+				Description string `json:"description"`
+				Images      []struct {
+					ImagePath string `json:"imagePath"`
+					AltText   string `json:"altText"`
+				} `json:"images"`
+				MoreDetailLabel string `json:"moreDetailLabel"`
+				HideDetailLabel string `json:"hideDetailLabel"`
+				Details         []struct {
+					Code  string   `json:"code"`
+					Items []string `json:"items"`
+					Title string   `json:"title"`
+				} `json:"details"`
+				DeckplanCodes struct {
+					Label  string `json:"label"`
+					Images []struct {
+						ImagePath string `json:"imagePath"`
+					} `json:"images"`
+				} `json:"deckplanCodes"`
+				ShipAccessibilityAction struct {
+					Label           string `json:"label"`
+					Target          string `json:"target"`
+					Disabled        bool   `json:"disabled"`
+					ServicePath     string `json:"servicePath"`
+					HTTPRequestType string `json:"httpRequestType"`
+					DisplayType     string `json:"displayType"`
+				} `json:"shipAccessibilityAction"`
+				CategoryAccessibilityAction struct {
+					Label           string `json:"label"`
+					Target          string `json:"target"`
+					Disabled        bool   `json:"disabled"`
+					ServicePath     string `json:"servicePath"`
+					HTTPRequestType string `json:"httpRequestType"`
+					DisplayType     string `json:"displayType"`
+				} `json:"categoryAccessibilityAction"`
+				PriceLockup struct {
+					Currency                  string  `json:"currency"`
+					CurrencySymbol            string  `json:"currencySymbol"`
+					OriginalPriceNbr          float64     `json:"originalPriceNbr"`
+					PerPerson                 string  `json:"perPerson"`
+					PricePerPersonNbr         float64 `json:"pricePerPersonNbr"`
+					PriceIncludesTaxesAndFees bool    `json:"priceIncludesTaxesAndFees"`
+					Prefix                    string  `json:"prefix"`
+					Price                     string  `json:"price"`
+					TaxesAndFees              string  `json:"taxesAndFees"`
+					TaxesAndFeesNbr           float64 `json:"taxesAndFeesNbr"`
+					TotalPriceNbr             float64 `json:"totalPriceNbr"`
+					TotalDiscountNbr          float64     `json:"totalDiscountNbr"`
+					Value                     float64     `json:"value"`
+					SelectedFareCode          string  `json:"selectedFareCode"`
+					NetPrice                  float64     `json:"netPrice"`
+					RawPrice                  float64     `json:"rawPrice"`
+					Credit                    bool    `json:"credit"`
+				} `json:"priceLockup"`
+				ConnectedRooms        bool   `json:"connectedRooms"`
+				GuaranteeCategory     bool   `json:"guaranteeCategory"`
+				FamilyEligible        bool   `json:"familyEligible"`
+				StateroomCategoryCode string `json:"stateroomCategoryCode"`
+				StateroomSubtypeCode  string `json:"stateroomSubtypeCode"`
+				Accessible            bool   `json:"accessible"`
+			} `json:"stateroomCategories"`
+		} `json:"stateroomCategoryGroups"`
+	}
+}
+
 type customMetric struct {
-	url             string
-	status          float64
-	totalMS         float64
-	dnsMS           float64
-	firstbyteMS     float64
-	connectMS       float64
-	price           float64
-	cruiseID        string
-	itinerary       string
-	stateroomClass  string
-	dateLabel       string
-	ship            string
-	departurePort   string
-	days            string
-	shipCode        string
-	destinationCode string
+	url                  string
+	status               float64
+	totalMS              float64
+	dnsMS                float64
+	firstbyteMS          float64
+	connectMS            float64
+	price                float64
+	cruiseID             string
+	itinerary            string
+	stateroomClass       string
+	dateLabel            string
+	ship                 string
+	departurePort        string
+	days                 string
+	shipCode             string
+	destinationCode      string
+	stateroomDetailClass string
 }
 
 type Exporter struct {
@@ -204,46 +358,166 @@ func NewExporter(ctx context.Context, inverval time.Duration, urls []string) (hc
 		ctx: ctx,
 		urlStatus: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "royal",
-			Subsystem: "external",
-			Name:      "proce",
+			Subsystem: "detail",
+			Name:      "url_status",
 			Help:      "Status of the URL as a integer value",
 		}, []string{"url"}),
 		urlMs: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "royal",
-			Subsystem: "external",
+			Subsystem: "detail",
 			Name:      "url_response_ms",
 			Help:      "Response time in milliseconds it took for the URL to respond.",
 		}, []string{"url"}),
 		urlDNS: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "royal",
-			Subsystem: "external",
+			Subsystem: "detail",
 			Name:      "url_dns_ms",
 			Help:      "Response time in milliseconds it took for the DNS request to take place.",
 		}, []string{"url"}),
 		urlFirstByte: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "royal",
-			Subsystem: "external",
+			Subsystem: "detail",
 			Name:      "url_first_byte_ms",
 			Help:      "Response time in milliseconds it took to retrive the first byte.",
 		}, []string{"url"}),
 		urlConnectTime: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "royal",
-			Subsystem: "external",
+			Subsystem: "detail",
 			Name:      "url_connect_time_ms",
 			Help:      "Response time in milliseconds it took to establish the inital connection.",
 		}, []string{"url"}),
 		royalPrice: prometheus.NewGaugeVec(prometheus.GaugeOpts{
 			Namespace: "royal",
-			Subsystem: "external",
+			Subsystem: "detail",
 			Name:      "price",
 			Help:      "cabin price with labels",
-		}, []string{"url", "cruiseid", "itinerary", "stateroomclass", "datelabel", "ship", "departureport", "days", "shipcode", "destinationcode"}),
+		}, []string{"url", "cruiseid", "itinerary", "stateroomclass", "datelabel", "ship", "departureport", "days", "shipcode", "destinationcode", "stateroomdetailclass"}),
 		healthcheck_invertval: inverval,
 		urls:                  urls,
 	}
 	prometheus.MustRegister(hc.urlStatus, hc.urlMs, hc.urlDNS, hc.urlConnectTime, hc.urlFirstByte, hc.royalPrice)
 	http.Handle("/metrics", promhttp.Handler())
 	return hc
+}
+
+func paramsToQueryString(params map[string]string) string {
+	var queryString string
+	for key, value := range params {
+		queryString += fmt.Sprintf("%s=%s&", key, value)
+	}
+	return queryString[:len(queryString)-1]
+}
+
+func (hc *Exporter) fetchDetails(ctx context.Context, shipName string, shipDestinationCode string, departurePort string, days int, ID string, shipCode string, sc Sailing, stateroom StateroomClassPricing, ch chan<- string) {
+	params := map[string]string{
+		"groupId":              ID,
+		"packageCode":          sc.Itinerary.Code,
+		"roomIndex":            "1",
+		"sailDate":             sc.SailDate,
+		"selectedCurrencyCode": "USD",
+		"shipCode":             shipCode,
+		"startDate":            sc.StartDate,
+		"stepSubtypeFlow":      "selectAndContinueSailDate",
+		"country":              "USA",
+		"landing":              "false",
+		"language":             "en",
+		"market":               "usa",
+		"browser":              "safari",
+		"browserVersion":       "17.0.0",
+		"screenWidth":          "1680",
+		"browserWidth":         "1680",
+		"device":               "desktop",
+	}
+
+	jsonData := map[string]interface{}{
+		"acceptedWipeState":              false,
+		"continueConnectedStateroomFlow": false,
+		"sailDate":                       sc.SailDate,
+		"stateroom":                      stateroom.StateroomClass.ID,
+		"stateroomCategoryCode":          nil,
+		"stateroomSubType":               nil,
+		"bookingCategory":                "DEPOSIT_NOT_REFUNDABLE",
+		"index":                          1,
+	}
+
+	if stateroom.Price.Value == 0 {
+		ch <- fmt.Sprintf("SUCCESS: %s %s %s %s %s", shipName, ID, sc.Itinerary.Code, sc.SailDate, stateroom.StateroomClass.ID)
+		return
+	}
+	if shipName != "Harmony of the Seas" && shipName != "Ovation of the Seas"{
+		ch <- fmt.Sprintf("SUCCESS: %s %s %s %s %s", shipName, ID, sc.Itinerary.Code, sc.SailDate, stateroom.StateroomClass.ID)
+		return
+	}
+
+	jsonValue, err := json.Marshal(jsonData)
+	if err != nil {
+		ch <- "error marshaling json"
+	}
+
+	client := &http.Client{}
+
+	// Make the HTTP request
+	url := "https://www.royalcaribbean.com/mcb/api/booking/step/sailDate"
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
+	if err != nil {
+		ch <- "error building request"
+		return
+	}
+
+	req.URL.RawQuery = paramsToQueryString(params)
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15")
+
+	req = req.WithContext(ctx)
+
+	var details CruiseDetails
+	resp, err := client.Do(req)
+	if err != nil {
+		ch <- "error downloading"
+		return
+	}
+
+	defer resp.Body.Close()
+
+
+
+	bodyText, err := io.ReadAll(resp.Body)
+	if err != nil {
+		ch <- "error downloading"
+		return
+	}
+
+	test := json.Unmarshal(bodyText, &details)
+	if test != nil {
+		ch <- fmt.Sprintf("ERROR: %s %s %s %s %s", shipName, ID, sc.Itinerary.Code, sc.SailDate, stateroom.StateroomClass.ID)
+		return
+	}
+	for _, srd := range details.StepDetails.StateroomCategoryGroups {
+		for _, srcg := range srd.StateroomCategories {
+			hc.updateCustomMetrics(
+				&customMetric{
+					url:                  "test",
+					dnsMS:                10,
+					connectMS:            10,
+					firstbyteMS:          10,
+					totalMS:              10,
+					status:               1,
+					price:                float64(srcg.PriceLockup.TotalPriceNbr),
+					cruiseID:             ID,
+					itinerary:            sc.Itinerary.Code,
+					stateroomClass:       stateroom.StateroomClass.ID,
+					dateLabel:            sc.SailDate,
+					ship:                 shipName,
+					departurePort:        departurePort,
+					days:                 strconv.Itoa(days),
+					shipCode:             shipCode,
+					destinationCode:      shipDestinationCode,
+					stateroomDetailClass: srcg.Title,
+				},
+			)
+		}
+	}
+	ch <- fmt.Sprintf("SUCCESS: %s %s %s %s %s", shipName, ID, sc.Itinerary.Code, sc.SailDate, stateroom.StateroomClass.ID)
 }
 
 func (hc *Exporter) updateCustomMetrics(cm *customMetric) {
@@ -271,43 +545,46 @@ func (hc *Exporter) updateCustomMetrics(cm *customMetric) {
 		"url": cm.url,
 	}).Set(cm.status)
 	hc.royalPrice.With(prometheus.Labels{
-		"url":             cm.url,
-		"cruiseid":        cm.cruiseID,
-		"itinerary":       cm.itinerary,
-		"stateroomclass":  cm.stateroomClass,
-		"datelabel":       cm.dateLabel,
-		"ship":            cm.ship,
-		"departureport":   cm.departurePort,
-		"days":            cm.days,
-		"shipcode":        cm.shipCode,
-		"destinationcode": cm.destinationCode,
+		"url":                  cm.url,
+		"cruiseid":             cm.cruiseID,
+		"itinerary":            cm.itinerary,
+		"stateroomclass":       cm.stateroomClass,
+		"datelabel":            cm.dateLabel,
+		"ship":                 cm.ship,
+		"departureport":        cm.departurePort,
+		"days":                 cm.days,
+		"shipcode":             cm.shipCode,
+		"destinationcode":      cm.destinationCode,
+		"stateroomdetailclass": cm.stateroomDetailClass,
 	}).Set(cm.price)
 }
 
 func (hc *Exporter) fetchStats(url string) {
 
-	var start, connect, dns time.Time
+    hc.royalPrice.Reset()
 
-	var connectMS, dnsMS, firstbyteMS, totalMS, status float64
+	//var start, connect, dns time.Time
+
+	//var connectMS, dnsMS, firstbyteMS, totalMS, status float64
 
 	trace := &httptrace.ClientTrace{
-		DNSStart: func(dsi httptrace.DNSStartInfo) { dns = time.Now() },
-		DNSDone: func(ddi httptrace.DNSDoneInfo) {
-			dnsMS = float64(time.Since(dns).Milliseconds())
-		},
+		// //	DNSStart: func(dsi httptrace.DNSStartInfo) { dns = time.Now() },
+		// //	DNSDone: func(ddi httptrace.DNSDoneInfo) {
+		// 		//dnsMS = float64(time.Since(dns).Milliseconds())
+		// 	},
 
-		ConnectStart: func(network, addr string) { connect = time.Now() },
-		ConnectDone: func(network, addr string, err error) {
-			connectMS = float64(time.Since(connect).Milliseconds())
-		},
+		// 	ConnectStart: func(network, addr string) { connect = time.Now() },
+		// 	ConnectDone: func(network, addr string, err error) {
+		// 		//connectMS = float64(time.Since(connect).Milliseconds())
+		// 	},
 
-		GotFirstResponseByte: func() {
-			firstbyteMS = float64(time.Since(start).Milliseconds())
-		},
+		// 	GotFirstResponseByte: func() {
+		// 		//firstbyteMS = float64(time.Since(start).Milliseconds())
+		// 	},
 	}
 
 	count := 20 // Set the number of results per page
-	skip := 0   // Start with the first page
+	skip := 0  // Start with the first page
 
 	for {
 		jsonData := map[string]interface{}{
@@ -336,7 +613,7 @@ func (hc *Exporter) fetchStats(url string) {
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("User-Agent", "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Safari/605.1.15")
 
-		start = time.Now()
+		//start = time.Now()
 		// Send the HTTP request.
 		client := &http.Client{}
 		resp, err := client.Do(req)
@@ -356,39 +633,39 @@ func (hc *Exporter) fetchStats(url string) {
 
 		for _, s := range data.Data.CruiseSearch.Results.Cruises {
 			for _, sc := range s.Sailings {
+				ch := make(chan string, len(sc.StateroomClassPricing))
+				defer close(ch)
+
+				test, cancel := context.WithTimeout(context.Background(), 60*time.Second)
+				defer cancel()
 				for _, stateroom := range sc.StateroomClassPricing {
-					if stateroom.Price.Value > 0 {
-						hc.updateCustomMetrics(
-							&customMetric{
-								url:             url,
-								dnsMS:           dnsMS,
-								connectMS:       connectMS,
-								firstbyteMS:     firstbyteMS,
-								totalMS:         totalMS,
-								status:          status,
-								price:           float64(stateroom.Price.Value),
-								cruiseID:        s.ID,
-								itinerary:       sc.Itinerary.Code,
-								stateroomClass:  stateroom.StateroomClass.ID,
-								dateLabel:       sc.SailDate,
-								ship:            s.MasterSailing.Itinerary.Ship.Name,
-								departurePort:   s.MasterSailing.Itinerary.DeparturePort.Name,
-								days:            strconv.Itoa(s.MasterSailing.Itinerary.TotalNights),
-								shipCode:        s.MasterSailing.Itinerary.Ship.Code,
-								destinationCode: s.MasterSailing.Itinerary.Destination.Code,
-							},
-						)
+					go hc.fetchDetails(
+						test,
+						s.MasterSailing.Itinerary.Ship.Name, 
+						s.MasterSailing.Itinerary.Destination.Code, 
+						s.MasterSailing.Itinerary.DeparturePort.Name, 
+						s.MasterSailing.Itinerary.TotalNights, 
+						s.ID, s.MasterSailing.Itinerary.Ship.Code, 
+						sc, 
+						stateroom, 
+						ch)
+				}
+				for i := 0; i < len(sc.StateroomClassPricing); i++ {
+					select {
+					case result := <-ch:
+						fmt.Println(result)
+					case <-test.Done():
+						fmt.Println("Request timed out")
 					}
 				}
 			}
 		}
-
-		log.Printf("pulled down %d skipping the first %d of %d total", count, skip, data.Data.CruiseSearch.Results.Total)
 		if skip < (data.Data.CruiseSearch.Results.Total - 20) {
 			skip = skip + 20
 		} else {
 			break
 		}
+		log.Printf("pulled down %d skipping the first %d of %d total", count, skip, data.Data.CruiseSearch.Results.Total)
 	}
 }
 
